@@ -10,7 +10,7 @@
 <body>
 <div class="wrap">
   <header class="card head center">
-    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}?v=3" alt="Instant & Keeps">
+    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}?v=4" alt="Instant & Keeps">
     <h1>Upload Your Photos</h1>
     <p class="subtitle">Please upload up to 9 photos. All images will be turned into squares.</p>
     <p class="tiny muted">Accepted files: JPG, PNG, HEIC/HEIF, WEBP, PDF</p>
@@ -64,10 +64,6 @@
       const tile = document.createElement('div');
       tile.className = 'preview-item';
 
-      const badge = document.createElement('div');
-      badge.className = 'badge';
-      tile.appendChild(badge);
-
       const img = document.createElement('img');
       img.className = 'thumb';
       img.alt = file.name;
@@ -78,45 +74,50 @@
       btn.className = 'thumb-x';
       btn.title = 'Remove';
       btn.textContent = '×';
-      btn.onclick = () => { selected.splice(idx, 1); syncInput(); render(); };
+      btn.onclick = () => { selected.splice(idx, 1); render(); };
       tile.appendChild(btn);
 
-      if (file.type && file.type.startsWith('image/')) {
-        badge.textContent = '';
-        const r = new FileReader();
-        r.onload = e => img.src = e.target.result;
-        r.onerror = () => { img.style.display = 'none'; };
-        r.readAsDataURL(file);
+      if (file.type === 'application/pdf') {
+        img.alt = file.name + ' (PDF)';
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#EEE"/><text x="100" y="110" font-size="48" text-anchor="middle" fill="#555">PDF</text></svg>');
       } else {
-        // Non-image (e.g., PDF) — show a badge instead of preview
-        img.style.display = 'none';
-        badge.textContent = 'PDF';
+        const r = new FileReader();
+        r.onload = e => (img.src = e.target.result);
+        r.readAsDataURL(file);
       }
+
       preview.appendChild(tile);
     });
 
     const n = selected.length;
     countMsg.textContent = n ? `Selected ${n} / ${MAX}` : '';
     photosErr.style.display = (n === 0 || n > MAX) ? 'block' : 'none';
+
+    // ✅ Always sync to the real input so first submit works
+    syncInput();
   }
 
   input.addEventListener('change', () => {
     const incoming = Array.from(input.files || []).filter(f => f && f.size > 0);
     const room = Math.max(0, MAX - selected.length);
     selected = selected.concat(incoming.slice(0, room));
-    syncInput(); render();
-    input.value = ''; // allow re-choose same file
+    render();
+    // Do NOT clear input.value here; we already synced to input.files
   });
 
   form.addEventListener('submit', (e) => {
+    // ✅ Belt & suspenders: ensure input.files is populated
     syncInput();
+
     let ok = true;
     if (!document.getElementById('name').value.trim()) { nameErr.style.display = 'block'; ok = false; } else { nameErr.style.display = 'none'; }
     if (input.files.length === 0 || input.files.length > MAX) { photosErr.style.display = 'block'; ok = false; } else { photosErr.style.display = 'none'; }
+
     if (!ok) e.preventDefault();
   });
 
-  selected = []; syncInput(); render();
+  // Init
+  selected = []; render();
 })();
 </script>
 </body>
