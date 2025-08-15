@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Instant & Keeps — Upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instant & Keeps — Local Upload</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <div class="wrap">
   <header class="card head">
-    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps" class="logo"> 
+    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps" width="260">
     <h1>Upload Your Photos</h1>
     <p class="subtitle">Please upload up to 9 photos. All images will be turned into squares.</p>
-    <p class="tiny muted">Accepted files: JPG, PNG, HEIC/HEIF, WEBP, PDF</p>
+    <p class="tiny muted">Accepted files: JPG, PNG, HEIC/HEIF, WEBP, GIF, PDF</p>
   </header>
 
   {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
@@ -22,111 +22,16 @@
     <input id="name" name="name" type="text" required>
 
     <label for="photos">Select files (up to 9)</label>
-    <input id="photos" name="photos" type="file" accept="image/*,application/pdf" multiple>
+    <input id="photos" name="photos" type="file"
+           accept=".jpg,.jpeg,.png,.gif,.heic,.heif,.webp,.pdf"
+           multiple required>
 
-    <div id="preview" class="preview-grid"></div>
-    <div class="muted tiny" id="countMsg"></div>
-    <div id="nameError" class="inline-error" style="display:none;">Please enter your name.</div>
-    <div id="photosError" class="inline-error" style="display:none;">Please select 1–9 files.</div>
-
-    <button type="submit">Upload Photos</button>
+    <button type="submit" class="primary">Upload Photos</button>
   </form>
 
   <footer class="muted">
     <p class="tiny">© 2025 Instant & Keeps</p>
   </footer>
 </div>
-
-<script>
-(function () {
-  const MAX = 9;
-
-  const form = document.getElementById('uploadForm');
-  const input = document.getElementById('photos');
-  const preview = document.getElementById('preview');
-  const countMsg = document.getElementById('countMsg');
-  const nameErr = document.getElementById('nameError');
-  const photosErr = document.getElementById('photosError');
-
-  let selected = [];
-
-  function syncInput() {
-    const dt = new DataTransfer();
-    selected.slice(0, MAX).forEach(f => dt.items.add(f));
-    input.files = dt.files;
-  }
-
-  function render() {
-    preview.innerHTML = '';
-    selected.forEach((file, idx) => {
-      const tile = document.createElement('div');
-      tile.className = 'preview-item';
-
-      const img = document.createElement('img');
-      img.className = 'thumb';
-      img.alt = file.name;
-      tile.appendChild(img);
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'thumb-x';
-      btn.title = 'Remove';
-      btn.textContent = '×';
-      btn.onclick = () => {
-        selected.splice(idx, 1);
-        syncInput();
-        render();
-      };
-      tile.appendChild(btn);
-
-      if (file.type && file.type.toLowerCase().includes('pdf')) {
-        // show a simple PDF placeholder
-        img.src = 'data:image/svg+xml;base64,' +
-          btoa('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="100%" height="100%" fill="#eee"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="42" fill="#999">PDF</text></svg>');
-      } else {
-        const r = new FileReader();
-        r.onload = (e) => img.src = e.target.result;
-        r.readAsDataURL(file);
-      }
-
-      preview.appendChild(tile);
-    });
-
-    photosErr.style.display = (selected.length === 0 || selected.length > MAX) ? 'block' : 'none';
-    countMsg.textContent = selected.length ? `Selected ${selected.length} / ${MAX}` : '';
-  }
-
-  input.addEventListener('change', () => {
-    const incoming = Array.from(input.files || []);
-    const room = Math.max(0, MAX - selected.length);
-    const toAdd = incoming.slice(0, room);
-    // De-dupe by name+size to avoid phantom duplicates
-    const existingKeys = new Set(selected.map(f => f.name + ':' + f.size));
-    toAdd.forEach(f => {
-      const key = f.name + ':' + f.size;
-      if (!existingKeys.has(key)) selected.push(f);
-    });
-    syncInput();
-    render();
-    // reset so picking same file again fires 'change'
-    input.value = '';
-  });
-
-  form.addEventListener('submit', (e) => {
-    syncInput(); // make sure input.files mirrors selected
-    let ok = true;
-
-    const name = document.getElementById('name').value.trim();
-    if (!name) { nameErr.style.display = 'block'; ok = false; } else { nameErr.style.display = 'none'; }
-    if (input.files.length === 0 || input.files.length > MAX) { photosErr.style.display = 'block'; ok = false; } else { photosErr.style.display = 'none'; }
-    if (!ok) e.preventDefault();
-  });
-
-  // init
-  selected = [];
-  syncInput();
-  render();
-})();
-</script>
 </body>
 </html>
