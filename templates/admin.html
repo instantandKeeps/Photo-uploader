@@ -10,12 +10,12 @@
 <body>
 <div class="wrap">
   {% if needs_key %}
-    <div class="card">
+    <div class="card center">
       <h1>Admin</h1>
-      <form method="get" action="/admin">
+      <form method="get" action="/admin" class="form">
         <label for="key">Password</label>
         <input id="key" name="key" type="password" required>
-        <button type="submit">Enter</button>
+        <button type="submit" class="brand">Enter</button>
       </form>
       <p class="tiny muted">Default password is <code>ik2025</code>. Set <code>ADMIN_PASSWORD</code> env var on Render to change.</p>
     </div>

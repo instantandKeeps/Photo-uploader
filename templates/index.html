@@ -9,10 +9,11 @@
 </head>
 <body>
 <div class="wrap">
-  <header class="card head">
-    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps">
+  <header class="card head center">
+    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}?v=3" alt="Instant & Keeps">
     <h1>Upload Your Photos</h1>
-    <p class="subtitle">Turn your pictures into custom magnets — right here, right now.</p>
+    <p class="subtitle">Please upload up to 9 photos. All images will be turned into squares.</p>
+    <p class="tiny muted">Accepted files: JPG, PNG, HEIC/HEIF, WEBP, PDF</p>
   </header>
 
   {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
@@ -21,20 +22,20 @@
     <label for="name">Your Name</label>
     <input id="name" name="name" type="text" required autocomplete="name">
 
-    <label for="photos">Select Photos (up to 9)</label>
-    <input id="photos" name="photos" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif" multiple required>
+    <label for="photos">Select files (up to 9)</label>
+    <input id="photos" name="photos" type="file"
+           accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.pdf"
+           multiple required>
 
     <div id="preview" class="preview-grid"></div>
     <div class="muted tiny" id="countMsg"></div>
     <div id="nameError" class="inline-error" style="display:none;">Please enter your name.</div>
-    <div id="photosError" class="inline-error" style="display:none;">Please select 1–9 photos. Images are printed square, so edges may crop.</div>
+    <div id="photosError" class="inline-error" style="display:none;">Please select 1–9 files.</div>
 
-    <p class="help">Accepted: JPG, PNG, HEIC/HEIF, WEBP. Originals are sent (no resizing). Keep important details centered to avoid crop.</p>
-
-    <button type="submit">Upload Photos</button>
+    <button type="submit" class="brand">Upload Photos</button>
   </form>
 
-  <footer class="muted">
+  <footer class="muted center">
     <p class="tiny">© 2025 Instant & Keeps</p>
   </footer>
 </div>
@@ -63,6 +64,10 @@
       const tile = document.createElement('div');
       tile.className = 'preview-item';
 
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      tile.appendChild(badge);
+
       const img = document.createElement('img');
       img.className = 'thumb';
       img.alt = file.name;
@@ -77,12 +82,15 @@
       tile.appendChild(btn);
 
       if (file.type && file.type.startsWith('image/')) {
+        badge.textContent = '';
         const r = new FileReader();
         r.onload = e => img.src = e.target.result;
         r.onerror = () => { img.style.display = 'none'; };
         r.readAsDataURL(file);
       } else {
+        // Non-image (e.g., PDF) — show a badge instead of preview
         img.style.display = 'none';
+        badge.textContent = 'PDF';
       }
       preview.appendChild(tile);
     });
@@ -97,7 +105,7 @@
     const room = Math.max(0, MAX - selected.length);
     selected = selected.concat(incoming.slice(0, room));
     syncInput(); render();
-    input.value = '';
+    input.value = ''; // allow re-choose same file
   });
 
   form.addEventListener('submit', (e) => {

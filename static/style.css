@@ -1,5 +1,5 @@
 
-:root{ --bg:#f6f4f2; --card:#fff; --ink:#141a1a; --muted:#6f6f6f; }
+:root{ --bg:#f6f4f2; --card:#fff; --ink:#141a1a; --muted:#6f6f6f; --brand:#b29a7d; --danger:#b3261e; }
 *{ box-sizing:border-box }
 body{ margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg); }
 .wrap{ max-width:780px; margin:0 auto; padding:24px; }
@@ -7,19 +7,26 @@ body{ margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,
 .center{text-align:center}
 h1{ margin:0 0 8px; font-weight:700 }
 .subtitle{ margin:0; color:var(--muted) }
-.logo{ display:block; height:64px; width:auto; margin:8px auto 12px }
+.logo{ display:block; width:220px; height:auto; margin:8px auto 12px }
 
 .form label{ display:block; margin-top:12px; font-weight:600 }
 .form input[type="text"], .form input[type="file"], .form input[type="password"]{ width:100%; padding:12px; border:1px solid #ddd; border-radius:10px }
 button, .button{ display:inline-block; background:#141a1a; color:#fff; border:none; padding:12px 16px; border-radius:10px; cursor:pointer; text-decoration:none }
 button:hover, .button:hover{ opacity:.92 }
 button[type="submit"]{ width:100%; margin-top:12px }
-.inline-error{ color:#b3261e; margin-top:8px }
+
+.button.small, button.small{ padding:8px 12px; border-radius:8px; font-size:.95rem }
+button.danger{ background:var(--danger) }
+button.brand, .button.brand{ background:var(--brand); color:#fff }
+button.brand:hover, .button.brand:hover{ filter:brightness(.95) }
+
+.inline-error{ color:var(--danger); margin-top:8px }
 
 /* Preview grid - mobile first */
 .preview-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px }
-.preview-item{ position:relative; background:#f4f4f4; border-radius:10px; overflow:hidden; min-height:110px }
+.preview-item{ position:relative; background:#f4f4f4; border-radius:10px; overflow:hidden; min-height:110px; display:flex; align-items:center; justify-content:center }
 .preview-item img.thumb{ display:block; width:100%; height:110px; object-fit:cover }
+.preview-item .badge{ position:absolute; top:8px; left:8px; background:#333; color:#fff; font-size:12px; padding:4px 6px; border-radius:6px }
 
 /* Touch-friendly X */
 .thumb-x{
@@ -35,5 +42,5 @@ button[type="submit"]{ width:100%; margin-top:12px }
   .wrap{ padding:12px }
   .preview-grid{ gap:8px }
   .preview-item img.thumb{ height:100px }
-  .logo{ height:60px }
+  .logo{ width:240px }
 }

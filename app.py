@@ -10,7 +10,8 @@ UPLOADS = BASE_DIR / "uploads"
 UPLOADS.mkdir(parents=True, exist_ok=True)
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ik2025")
-ALLOWED_EXTS = {"jpg","jpeg","png","gif","webp","heic","heif"}
+# Include pdf in allowed extensions
+ALLOWED_EXTS = {"jpg","jpeg","png","gif","webp","heic","heif","pdf"}
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTS
@@ -34,12 +35,12 @@ def handle_upload():
     if not name:
         return render_template("index.html", error="Please enter your name.")
     if not files:
-        return render_template("index.html", error="Please choose at least one photo.")
+        return render_template("index.html", error="Please choose at least one file.")
 
+    # Filter allowed, keep up to 9
     files = [f for f in files if f and f.filename and allowed_file(f.filename)]
     if not files:
         return render_template("index.html", error="File type not supported.")
-
     files = files[:9]
 
     stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -56,7 +57,7 @@ def handle_upload():
             stem, ext = os.path.splitext(orig)
             fname = f"{stem}_{i}{ext}"
             i += 1
-        f.save(dest / fname)
+        f.save(dest / fname)  # no resizing/compression; originals saved
         saved += 1
 
     csv_path = BASE_DIR / "orders.csv"
