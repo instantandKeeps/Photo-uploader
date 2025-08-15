@@ -1,0 +1,53 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — Instant & Keeps</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  {% if needs_key %}
+    <div class="card">
+      <h1>Admin</h1>
+      <form method="get" action="/admin">
+        <label for="key">Password</label>
+        <input id="key" name="key" type="password" required>
+        <button type="submit">Enter</button>
+      </form>
+      <p class="tiny muted">Default password is <code>ik2025</code>. Set <code>ADMIN_PASSWORD</code> env var on Render to change.</p>
+    </div>
+  {% else %}
+    <div class="card">
+      <h1>Submissions</h1>
+      {% if files %}
+        <ul class="filelist">
+          {% for entry in files %}
+            <li>
+              <strong>{{ entry.folder }}</strong>
+              <ul>
+                {% for fname in entry.files %}
+                  <li>
+                    <a class="button small" href="{{ url_for('get_upload', filename=entry.folder + '/' + fname) }}?key={{ key }}">Download</a>
+                    <span>{{ fname }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+              <form method="post" style="display:inline">
+                <input type="hidden" name="key" value="{{ key }}">
+                <input type="hidden" name="delete" value="{{ entry.folder }}">
+                <button class="danger small" type="submit">Delete folder</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No uploads yet.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+</body>
+</html>

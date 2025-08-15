@@ -1,0 +1,115 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Instant & Keeps — Upload</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <header class="card head">
+    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps">
+    <h1>Upload Your Photos</h1>
+    <p class="subtitle">Turn your pictures into custom magnets — right here, right now.</p>
+  </header>
+
+  {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
+
+  <form class="card form" action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
+    <label for="name">Your Name</label>
+    <input id="name" name="name" type="text" required autocomplete="name">
+
+    <label for="photos">Select Photos (up to 9)</label>
+    <input id="photos" name="photos" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif" multiple required>
+
+    <div id="preview" class="preview-grid"></div>
+    <div class="muted tiny" id="countMsg"></div>
+    <div id="nameError" class="inline-error" style="display:none;">Please enter your name.</div>
+    <div id="photosError" class="inline-error" style="display:none;">Please select 1–9 photos. Images are printed square, so edges may crop.</div>
+
+    <p class="help">Accepted: JPG, PNG, HEIC/HEIF, WEBP. Originals are sent (no resizing). Keep important details centered to avoid crop.</p>
+
+    <button type="submit">Upload Photos</button>
+  </form>
+
+  <footer class="muted">
+    <p class="tiny">© 2025 Instant & Keeps</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const MAX = 9;
+  const form = document.getElementById('uploadForm');
+  const input = document.getElementById('photos');
+  const preview = document.getElementById('preview');
+  const countMsg = document.getElementById('countMsg');
+  const nameErr = document.getElementById('nameError');
+  const photosErr = document.getElementById('photosError');
+
+  let selected = [];
+
+  function syncInput() {
+    const dt = new DataTransfer();
+    selected.slice(0, MAX).forEach(f => dt.items.add(f));
+    input.files = dt.files;
+  }
+
+  function render() {
+    preview.innerHTML = '';
+    selected.forEach((file, idx) => {
+      const tile = document.createElement('div');
+      tile.className = 'preview-item';
+
+      const img = document.createElement('img');
+      img.className = 'thumb';
+      img.alt = file.name;
+      tile.appendChild(img);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'thumb-x';
+      btn.title = 'Remove';
+      btn.textContent = '×';
+      btn.onclick = () => { selected.splice(idx, 1); syncInput(); render(); };
+      tile.appendChild(btn);
+
+      if (file.type && file.type.startsWith('image/')) {
+        const r = new FileReader();
+        r.onload = e => img.src = e.target.result;
+        r.onerror = () => { img.style.display = 'none'; };
+        r.readAsDataURL(file);
+      } else {
+        img.style.display = 'none';
+      }
+      preview.appendChild(tile);
+    });
+
+    const n = selected.length;
+    countMsg.textContent = n ? `Selected ${n} / ${MAX}` : '';
+    photosErr.style.display = (n === 0 || n > MAX) ? 'block' : 'none';
+  }
+
+  input.addEventListener('change', () => {
+    const incoming = Array.from(input.files || []).filter(f => f && f.size > 0);
+    const room = Math.max(0, MAX - selected.length);
+    selected = selected.concat(incoming.slice(0, room));
+    syncInput(); render();
+    input.value = '';
+  });
+
+  form.addEventListener('submit', (e) => {
+    syncInput();
+    let ok = true;
+    if (!document.getElementById('name').value.trim()) { nameErr.style.display = 'block'; ok = false; } else { nameErr.style.display = 'none'; }
+    if (input.files.length === 0 || input.files.length > MAX) { photosErr.style.display = 'block'; ok = false; } else { photosErr.style.display = 'none'; }
+    if (!ok) e.preventDefault();
+  });
+
+  selected = []; syncInput(); render();
+})();
+</script>
+</body>
+</html>
