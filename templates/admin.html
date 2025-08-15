@@ -1,40 +1,44 @@
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Admin — Instant & Keeps</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <div class="wrap">
   {% if needs_key %}
-    <div class="card center">
-      <h1>Admin</h1>
-      <form method="get" action="/admin" class="form">
-        <label for="key">Password</label>
-        <input id="key" name="key" type="password" required>
-        <button type="submit" class="brand">Enter</button>
-      </form>
-      <p class="tiny muted">Default password is <code>ik2025</code>. Set <code>ADMIN_PASSWORD</code> env var to change.</p>
-    </div>
+  <div class="card">
+    <h1>Admin Access</h1>
+    <form method="get" action="/admin">
+      <label for="key">Password</label>
+      <input id="key" type="password" name="key" required>
+      <button type="submit">Enter</button>
+    </form>
+    <p class="tiny muted">Tip: set ADMIN_PASSWORD as an environment variable on Render for security.</p>
+  </div>
   {% else %}
-    <div class="card">
-      <h1>Submissions</h1>
-      {% if files %}
-        <ul class="filelist">
-          {% for f in files %}
-            <li>
-              <span>{{ f }}</span>
-              <a class="button small" href="{{ url_for('list_folder', folder=f, key=key) }}">Open</a>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No uploads yet.</p>
-      {% endif %}
-    </div>
+  <div class="card">
+    <h1>Uploads</h1>
+    {% if files %}
+      <ul class="filelist">
+      {% for f in files %}
+        <li>
+          <span>{{ f }}</span>
+          <a class="button small" href="{{ url_for('uploaded_file', filename=f) }}?key={{ request.args.get('key') }}">Download</a>
+          <form method="post" style="display:inline;">
+            <input type="hidden" name="key" value="{{ request.args.get('key') }}">
+            <input type="hidden" name="delete" value="{{ f }}">
+            <button class="danger small" type="submit">Delete</button>
+          </form>
+        </li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p>No uploads yet.</p>
+    {% endif %}
+  </div>
   {% endif %}
 </div>
 </body>

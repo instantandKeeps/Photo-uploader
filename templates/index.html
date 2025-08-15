@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,8 +8,8 @@
 </head>
 <body>
 <div class="wrap">
-  <header class="card head center">
-    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}?v=4" alt="Instant & Keeps">
+  <header class="card head">
+    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps">
     <h1>Upload Your Photos</h1>
     <p class="subtitle">Please upload up to 9 photos. All images will be turned into squares.</p>
     <p class="tiny muted">Accepted files: JPG, PNG, HEIC/HEIF, WEBP, PDF</p>
@@ -20,22 +19,20 @@
 
   <form class="card form" action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
     <label for="name">Your Name</label>
-    <input id="name" name="name" type="text" required autocomplete="name">
+    <input id="name" name="name" type="text" required>
 
     <label for="photos">Select files (up to 9)</label>
-    <input id="photos" name="photos" type="file"
-           accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.pdf"
-           multiple required>
+    <input id="photos" name="photos" type="file" accept="image/*,application/pdf" capture="environment" multiple>
 
     <div id="preview" class="preview-grid"></div>
     <div class="muted tiny" id="countMsg"></div>
     <div id="nameError" class="inline-error" style="display:none;">Please enter your name.</div>
     <div id="photosError" class="inline-error" style="display:none;">Please select 1–9 files.</div>
 
-    <button type="submit" class="brand">Upload Photos</button>
+    <button type="submit">Upload Photos</button>
   </form>
 
-  <footer class="muted center">
+  <footer class="muted">
     <p class="tiny">© 2025 Instant & Keeps</p>
   </footer>
 </div>
@@ -43,6 +40,7 @@
 <script>
 (function () {
   const MAX = 9;
+
   const form = document.getElementById('uploadForm');
   const input = document.getElementById('photos');
   const preview = document.getElementById('preview');
@@ -74,50 +72,60 @@
       btn.className = 'thumb-x';
       btn.title = 'Remove';
       btn.textContent = '×';
-      btn.onclick = () => { selected.splice(idx, 1); render(); };
+      btn.onclick = () => {
+        selected.splice(idx, 1);
+        syncInput();
+        render();
+      };
       tile.appendChild(btn);
 
-      if (file.type === 'application/pdf') {
-        img.alt = file.name + ' (PDF)';
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#EEE"/><text x="100" y="110" font-size="48" text-anchor="middle" fill="#555">PDF</text></svg>');
+      if (file.type && file.type.toLowerCase().includes('pdf')) {
+        // show a simple PDF placeholder
+        img.src = 'data:image/svg+xml;base64,' +
+          btoa('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="100%" height="100%" fill="#eee"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="42" fill="#999">PDF</text></svg>');
       } else {
         const r = new FileReader();
-        r.onload = e => (img.src = e.target.result);
+        r.onload = (e) => img.src = e.target.result;
         r.readAsDataURL(file);
       }
 
       preview.appendChild(tile);
     });
 
-    const n = selected.length;
-    countMsg.textContent = n ? `Selected ${n} / ${MAX}` : '';
-    photosErr.style.display = (n === 0 || n > MAX) ? 'block' : 'none';
-
-    // ✅ Always sync to the real input so first submit works
-    syncInput();
+    photosErr.style.display = (selected.length === 0 || selected.length > MAX) ? 'block' : 'none';
+    countMsg.textContent = selected.length ? `Selected ${selected.length} / ${MAX}` : '';
   }
 
   input.addEventListener('change', () => {
-    const incoming = Array.from(input.files || []).filter(f => f && f.size > 0);
+    const incoming = Array.from(input.files || []);
     const room = Math.max(0, MAX - selected.length);
-    selected = selected.concat(incoming.slice(0, room));
+    const toAdd = incoming.slice(0, room);
+    // De-dupe by name+size to avoid phantom duplicates
+    const existingKeys = new Set(selected.map(f => f.name + ':' + f.size));
+    toAdd.forEach(f => {
+      const key = f.name + ':' + f.size;
+      if (!existingKeys.has(key)) selected.push(f);
+    });
+    syncInput();
     render();
-    // Do NOT clear input.value here; we already synced to input.files
+    // reset so picking same file again fires 'change'
+    input.value = '';
   });
 
   form.addEventListener('submit', (e) => {
-    // ✅ Belt & suspenders: ensure input.files is populated
-    syncInput();
-
+    syncInput(); // make sure input.files mirrors selected
     let ok = true;
-    if (!document.getElementById('name').value.trim()) { nameErr.style.display = 'block'; ok = false; } else { nameErr.style.display = 'none'; }
-    if (input.files.length === 0 || input.files.length > MAX) { photosErr.style.display = 'block'; ok = false; } else { photosErr.style.display = 'none'; }
 
+    const name = document.getElementById('name').value.trim();
+    if (!name) { nameErr.style.display = 'block'; ok = false; } else { nameErr.style.display = 'none'; }
+    if (input.files.length === 0 || input.files.length > MAX) { photosErr.style.display = 'block'; ok = false; } else { photosErr.style.display = 'none'; }
     if (!ok) e.preventDefault();
   });
 
-  // Init
-  selected = []; render();
+  // init
+  selected = [];
+  syncInput();
+  render();
 })();
 </script>
 </body>

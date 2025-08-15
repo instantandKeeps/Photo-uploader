@@ -1,106 +1,131 @@
-
-import os, csv
-from datetime import datetime
-from pathlib import Path
+import os, csv, datetime
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, abort
 
+# ---------- Basic setup ----------
 app = Flask(__name__, static_folder="static", template_folder="templates")
-BASE = Path(__file__).resolve().parent
-UPLOADS = BASE / "uploads"
-UPLOADS.mkdir(exist_ok=True)
+
+UPLOAD_FOLDER = os.path.join(app.root_path, "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ik2025")
-ALLOWED_EXTS = {"jpg","jpeg","png","gif","webp","heic","heif","pdf"}
 
-def allowed_file(fn): 
-    return "." in fn and fn.rsplit(".",1)[1].lower() in ALLOWED_EXTS
+# allow images + pdf
+ALLOWED_EXTS = {"jpg","jpeg","png","gif","heic","heif","webp","pdf"}
 
-def safename(s):
-    return "".join(c for c in s if c.isalnum() or c in (" ","-","_")).strip().replace(" ","_") or "customer"
+def allowed_file(filename: str) -> bool:
+    if not filename:
+        return False
+    ext = filename.rsplit(".", 1)[-1].lower()
+    return ext in ALLOWED_EXTS
 
+# CSV log
+ORDERS_CSV = os.path.join(app.root_path, "orders.csv")
+if not os.path.exists(ORDERS_CSV):
+    with open(ORDERS_CSV, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["timestamp", "name", "filenames"])
+
+# ---------- Routes ----------
 @app.route("/")
-def home():
+def root():
     return redirect(url_for("upload"))
 
-@app.route("/upload", methods=["GET"])
+@app.route("/upload", methods=["GET","POST"])
 def upload():
-    return render_template("index.html")
+    error = None
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        files = request.files.getlist("photos")
 
-@app.route("/upload", methods=["POST"])
-def do_upload():
-    name = (request.form.get("name") or "").strip()
-    files = request.files.getlist("photos")
-    if not name:
-        return render_template("index.html", error="Please enter your name.")
-    files = [f for f in files if f and getattr(f, "filename", "") and allowed_file(f.filename)]
-    if not files or len(files) > 9:
-        return render_template("index.html", error="Please select 1–9 supported files.")
+        # validations
+        if not name:
+            error = "Please enter your name."
+        elif not files or len(files) == 0:
+            error = "Please select at least one file."
+        elif len(files) > 9:
+            error = "Please select no more than 9 files."
+        else:
+            clean = []
+            for f in files:
+                if f and allowed_file(f.filename):
+                    clean.append(f)
+            if not clean:
+                error = "Only JPG, PNG, HEIC/HEIF, WEBP, GIF, or PDF are accepted."
+            else:
+                # make per-order folder
+                stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                safe_name = "".join(c for c in name if c.isalnum() or c in (" ","-","_")).strip().replace(" ", "_")
+                order_folder = os.path.join(UPLOAD_FOLDER, f"{stamp}_{safe_name}")
+                os.makedirs(order_folder, exist_ok=True)
 
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    folder = f"{safename(name)}_{stamp}"
-    dest = UPLOADS / folder
-    dest.mkdir(parents=True, exist_ok=True)
+                saved_names = []
+                for f in clean:
+                    filename = f.filename
+                    # prevent collisions
+                    base, ext = os.path.splitext(filename)
+                    base = base[:80] or "file"
+                    final = base + ext
+                    i = 1
+                    while os.path.exists(os.path.join(order_folder, final)):
+                        final = f"{base}_{i}{ext}"
+                        i += 1
+                    f.save(os.path.join(order_folder, final))
+                    saved_names.append(final)
 
-    for f in files:
-        fn = os.path.basename(f.filename)
-        base, ext = os.path.splitext(fn)
-        i, out = 1, fn
-        while (dest/out).exists():
-            out = f"{base}_{i}{ext}"; i += 1
-        f.save(dest / out)
+                # log
+                with open(ORDERS_CSV, "a", newline="", encoding="utf-8") as fcsv:
+                    w = csv.writer(fcsv)
+                    w.writerow([stamp, name, ";".join(saved_names)])
 
-    # log
-    log = BASE / "orders.csv"
-    new = not log.exists()
-    with open(log, "a", newline="", encoding="utf-8") as fp:
-        w = csv.writer(fp)
-        if new: w.writerow(["timestamp","name","folder","count"])
-        w.writerow([stamp, name, folder, len(files)])
+                return redirect(url_for("success", count=len(saved_names)))
 
-    return redirect(url_for("success", name=name, count=len(files)))
+    return render_template("index.html", error=error)
 
 @app.route("/success")
 def success():
-    name = request.args.get("name","")
-    count = int(request.args.get("count","0"))
-    return render_template("success.html", name=name, count=count)
+    try:
+        count = int(request.args.get("count", "0"))
+    except:
+        count = 0
+    return render_template("success.html", count=count)
 
-@app.route("/admin")
+# ---- Admin: simple listing + download/delete (password via query or sessionless) ----
+@app.route("/admin", methods=["GET","POST"])
 def admin():
-    key = request.args.get("key","")
-    if key != ADMIN_PASSWORD:
+    key = request.args.get("key") or (request.form.get("key") if request.method=="POST" else "")
+    needs_key = (key != ADMIN_PASSWORD)
+    if needs_key:
         return render_template("admin.html", needs_key=True)
-    items = [p for p in UPLOADS.iterdir() if p.is_dir()]
-    items.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return render_template("admin.html", needs_key=False, files=[p.name for p in items], key=key)
 
-@app.route("/uploads/<path:folder>")
-def list_folder(folder):
-    key = request.args.get("key","")
-    if key != ADMIN_PASSWORD: abort(403)
-    root = (UPLOADS / folder).resolve()
-    if not root.exists() or not str(root).startswith(str(UPLOADS.resolve())):
-        abort(404)
-    entries = sorted([p.name for p in root.iterdir() if p.is_file()])
-    html = ["<h3>Files in {}</h3><ul>".format(folder)]
-    for e in entries:
-        html.append('<li><a href="{}">Download {}</a></li>'.format(url_for("download_file", folder=folder, filename=e, key=key), e))
-    html.append('</ul><p><a href="{}">Back</a></p>'.format(url_for("admin", key=key)))
-    return "\n".join(html)
+    # handle delete request
+    del_target = request.form.get("delete")
+    if del_target:
+        target_path = os.path.join(UPLOAD_FOLDER, del_target)
+        if os.path.exists(target_path) and os.path.isdir(target_path):
+            try:
+                # remove directory tree
+                import shutil
+                shutil.rmtree(target_path)
+            except Exception as e:
+                pass
 
-@app.route("/download/<path:folder>/<path:filename>")
-def download_file(folder, filename):
-    key = request.args.get("key","")
-    if key != ADMIN_PASSWORD: abort(403)
-    root = (UPLOADS / folder).resolve()
-    if not root.exists() or not str(root).startswith(str(UPLOADS.resolve())):
-        abort(404)
-    return send_from_directory(root, filename, as_attachment=True)
+    # list folders newest first
+    try:
+        items = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
+    except FileNotFoundError:
+        items = []
 
-@app.route("/health")
-def health():
-    return {"ok": True}
+    return render_template("admin.html", needs_key=False, files=items)
+
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    # Only for admin downloads with key
+    key = request.args.get("key")
+    if key != ADMIN_PASSWORD:
+        abort(403)
+    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    # Render/Heroku style: respect PORT env
+    port = int(os.environ.get("PORT", "8080"))
+    app.run(host="0.0.0.0", port=port, debug=False)
