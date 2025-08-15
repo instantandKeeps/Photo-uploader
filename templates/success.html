@@ -1,0 +1,24 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thank You — Instant & Keeps</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <header class="card head">
+    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps">
+    <h1>Thank you!</h1>
+    <p class="subtitle">We’ve received {{ count }} photo(s) — we’re starting on your magnets now.</p>
+  </header>
+
+  <div class="card center">
+    <a class="button" href="/upload">Upload more photos</a>
+    <p class="tiny muted" style="margin-top:10px;">You can close this page.</p>
+  </div>
+</div>
+</body>
+</html>
