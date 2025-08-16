@@ -1,37 +1,18 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Instant & Keeps — Local Upload</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <title>Instant & Keeps Uploader</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="wrap">
-  <header class="card head">
-    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps" width="260">
-    <h1>Upload Your Photos</h1>
-    <p class="subtitle">Please upload up to 9 photos. All images will be turned into squares.</p>
-    <p class="tiny muted">Accepted files: JPG, PNG, HEIC/HEIF, WEBP, GIF, PDF</p>
-  </header>
-
-  {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
-
-  <form class="card form" action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
-    <label for="name">Your Name</label>
-    <input id="name" name="name" type="text" required>
-
-    <label for="photos">Select files (up to 9)</label>
-    <input id="photos" name="photos" type="file"
-           accept=".jpg,.jpeg,.png,.gif,.heic,.heif,.webp,.pdf"
-           multiple required>
-
-    <button type="submit" class="primary">Upload Photos</button>
-  </form>
-
-  <footer class="muted">
-    <p class="tiny">© 2025 Instant & Keeps</p>
-  </footer>
-</div>
+  <div class="container">
+    <img src="/static/logo.jpg" class="logo">
+    <h2>Upload up to 9 photos</h2>
+    <form method="POST" action="/upload" enctype="multipart/form-data">
+      <input type="file" name="photos" accept="image/*,.pdf" multiple required>
+      <p>Accepted: JPG, PNG, HEIC, WEBP, GIF, PDF</p>
+      <button type="submit">Upload</button>
+    </form>
+  </div>
 </body>
 </html>

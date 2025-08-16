@@ -1,22 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Thanks — Instant & Keeps</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
+<!DOCTYPE html>
+<html>
+<head><title>Upload Successful</title></head>
 <body>
-<div class="wrap">
-  <header class="card head">
-    <img class="logo" src="{{ url_for('static', filename='logo.jpg') }}" alt="Instant & Keeps" width="220">
-    <h1>Thank you!</h1>
-    <p class="subtitle">We saved {{ count }} file(s). You can find them in the <strong>uploads/{{ folder }}</strong> folder.</p>
-  </header>
-
-  <div class="card center">
-    <a class="button" href="/">Upload more</a>
-  </div>
-</div>
+  <h2>✅ Upload complete!</h2>
+  <p>Files saved in folder: {{ folder }}</p>
+  <a href="/">⬅ Back to Upload</a>
 </body>
 </html>
