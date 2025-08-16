@@ -1,46 +1,68 @@
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
-import os
-from datetime import datetime
+import os, re, datetime
+from flask import Flask, render_template, request, redirect, url_for, abort
+from werkzeug.utils import secure_filename
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+ALLOWED_EXT = {"jpg","jpeg","png","heic","heif","webp","gif","pdf"}
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+app = Flask(__name__, static_folder="static", template_folder="templates")
 
-@app.route('/upload', methods=['POST'])
+def slugify_name(name: str) -> str:
+    # Keep letters, numbers, spaces, dashes and underscores; collapse spaces to '_'.
+    cleaned = re.sub(r"[^A-Za-z0-9 _-]+", "", name).strip()
+    cleaned = re.sub(r"\s+", "_", cleaned)
+    return cleaned or "guest"
+
+def is_allowed(filename: str) -> bool:
+    if "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_EXT
+
+@app.route("/")
+def home():
+    return redirect(url_for("upload"))
+
+@app.route("/upload", methods=["GET", "POST"])
 def upload():
-    if 'photos' not in request.files:
-        return "No file part"
-    files = request.files.getlist('photos')
-    if not files or files[0].filename == '':
-        return "No selected files"
-    
-    folder_name = datetime.now().strftime("%Y-%m-%d_uploads_%H%M%S")
-    save_path = os.path.join(UPLOAD_FOLDER, folder_name)
-    os.makedirs(save_path, exist_ok=True)
-    
-    for file in files:
-        filename = file.filename
-        file.save(os.path.join(save_path, filename))
-    
-    return render_template("success.html", folder=folder_name)
+    if request.method == "GET":
+        return render_template("index.html", error="")
+    # POST
+    name = (request.form.get("name") or "").strip()
+    files = request.files.getlist("photos")
+    error = ""
 
-@app.route('/gallery')
-def gallery():
-    key = request.args.get("key")
-    if key != "ik2025":
-        return "Unauthorized"
-    folders = os.listdir(UPLOAD_FOLDER)
-    folders.sort(reverse=True)
-    return render_template("admin.html", folders=folders)
+    if not name:
+        error = "Please enter your name."
+    elif not files or len(files) == 0:
+        error = "Please select at least one file."
+    elif len(files) > 9:
+        error = "Please select no more than 9 files."
+    else:
+        bad = [f.filename for f in files if not is_allowed(f.filename)]
+        if bad:
+            error = "These files are not accepted: " + ", ".join(bad)
 
-@app.route('/download/<path:folder>/<path:filename>')
-def download(folder, filename):
-    return send_from_directory(os.path.join(UPLOAD_FOLDER, folder), filename, as_attachment=True)
+    if error:
+        return render_template("index.html", error=error)
+
+    # Save: prefix each file with timestamp + customer name
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
+    who = slugify_name(name)
+    saved = 0
+    for f in files:
+        if not f or f.filename == "": 
+            continue
+        filename = secure_filename(f.filename)
+        final_name = f"{stamp}__{who}__{filename}"
+        f.save(os.path.join(UPLOAD_DIR, final_name))
+        saved += 1
+
+    return render_template("success.html", name=name, count=saved)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    # Run on localhost for Windows event use
+    app.run(host="127.0.0.1", port=5000, debug=False)
